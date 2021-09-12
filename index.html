@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ラブライブシリーズ声優DB</title>
+    <title>ラブライブシリーズ声優年齢自動計算ページ</title>
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.10.4/dayjs.min.js"
         integrity="sha512-0fcCRl828lBlrSCa8QJY51mtNqTcHxabaXVLPgw/jPA5Nutujh6CbTdDgRzl9aSPYW/uuE7c4SffFUQFBAy6lg=="
@@ -14,8 +14,12 @@
 
 <body>
     <div id="app">
-        <h1>ラブライブシリーズ声優一覧</h1>
-        <p>工事中。年齢はこのページを開かれたタイミングで計算されているので常に最新です。(誕生日があっていれば)<br>年齢の確認ができます</p>
+        <h1>ラブライブシリーズ声優年齢自動計算ページ</h1>
+        <p>年齢はこのページを開かれたタイミングで計算されているので常に最新です。<br>今日時点での年齢と次の誕生日までの日付が確認できます。
+            <br>ソースコードは<a
+                href="https://github.com/takonasu/lovelive-actor">こちら</a>で公開されています。機能追加やバグ報告などコントリビュートをお待ちしています。<br>
+        </p>
+
         グループで絞る：
         <select v-model="showGroup">
             <option disabled value="">グループ一覧</option>
@@ -23,8 +27,15 @@
                 {{ group }}
             </option>
         </select>
-        <button v-on:click="actorInfo = sortYear(actorInfo,true)">昇順</button>
-        <button v-on:click="actorInfo = sortYear(actorInfo,false)">降順</button>
+        <p>年齢：
+            <button v-on:click="actorInfo = sortYear(actorInfo,true)">昇順</button>
+            <button v-on:click="actorInfo = sortYear(actorInfo,false)">降順</button>
+        </p>
+        <p>次の誕生日までの日数：
+            <button v-on:click="actorInfo = sortNextBirthDay(actorInfo,true)">昇順</button>
+            <button v-on:click="actorInfo = sortNextBirthDay(actorInfo,false)">降順</button>
+        </p>
+
         <div v-for="actor in actorInfo" :key="actor.name">
             <p v-if="actor.group == showGroup || showGroup == `全て`" v-bind:class="convertGroupNameToRomaji(actor.group)"
                 class="card">
@@ -32,6 +43,7 @@
                 誕生日：{{ convertDate(actor.birth) }} <br>
                 グループ：{{ actor.group }} <br>
                 年齢: {{ year(actor.birth) }} <br>
+                次の誕生日まで： {{ nextBirthDayCount(actor.birth) }} 日<br>
                 詳細： {{ actor.detail }}
             </p>
         </div>
@@ -55,6 +67,19 @@
             convertDate: function (date) {
                 return dayjs(date).format('YYYY年MM月DD日')
             },
+            //次の誕生日までの日付計算
+            nextBirthDayCount: function (date) {
+                // 今年の誕生日
+                let thisYearBirthDay = dayjs(date).year(dayjs().year())
+
+                if (thisYearBirthDay.isAfter(dayjs())) {
+                    // 今日が今年の誕生日前の時
+                    return Math.ceil(thisYearBirthDay.diff(dayjs(), 'hour') / 24)
+                } else {
+                    // 今日が今年の誕生日の後の時
+                    return Math.ceil(thisYearBirthDay.add(1, 'year').diff(dayjs(), 'hour') / 24)
+                }
+            },
             // 年齢を返す
             year: function (date) {
                 let month = dayjs().diff(dayjs(date), "month")
@@ -70,6 +95,22 @@
                             return 1
                     } else {
                         if (dayjs(a.birth).isAfter(dayjs(b.birth)))
+                            return 1
+                        else
+                            return -1
+                    }
+                })
+            },
+            // 次の誕生日までの日数でソート
+            sortNextBirthDay: function (data, asc) {
+                return data.sort((a, b) => {
+                    if (asc) {
+                        if (this.nextBirthDayCount(a.birth) < this.nextBirthDayCount(b.birth))
+                            return -1
+                        else
+                            return 1
+                    } else {
+                        if (this.nextBirthDayCount(a.birth) < this.nextBirthDayCount(b.birth))
                             return 1
                         else
                             return -1
